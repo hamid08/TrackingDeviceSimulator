@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using TDS.Shared.Helpers;
@@ -10,31 +9,35 @@ class Program
 {
     static void Main(string[] args)
     {
-        double longitude = HexStringToLongitude("1E9C747C");
-        double latitude = HexStringToLatitude("154711AC");
+        //double longitude = HexStringToLongitude("1E9C747C");
+        //double latitude = HexStringToLatitude("154711AC");
 
-        string latHexString = LatitudeToHexString(latitude);
-        string longHexString = LongitudeToHexString(longitude);
-
-
-        double longitude1 = HexStringToLongitude("0f0ea850");
-        double latitude1 = HexStringToLatitude("209a6900");
-
-        string latHexString1 = LatitudeToHexString(latitude1);
-        string longHexString1 = LongitudeToHexString(longitude1);
+        //string latHexString = LatitudeToHexString(latitude);
+        //string longHexString = LongitudeToHexString(longitude);
 
 
-        Console.WriteLine(longitude);
+        //double longitude1 = HexStringToLongitude("0f0ea850");
+        //double latitude1 = HexStringToLatitude("209a6900");
+
+        //string latHexString1 = LatitudeToHexString(latitude1);
+        //string longHexString1 = LongitudeToHexString(longitude1);
+
+        //var source = new Point(29.553358, 52.598220);
+        //var destination = new Point(29.554441, 52.608920);
+        //var points = RandomPointGenerator.GenerateRandomPoints(source, destination, 1);
+
+
+
         int imeiCount = 1500;
         GenerateRandomListIMEI(imeiCount);
 
-        for (int i = 0; i < imeiCount; i++)
+        while (true)
         {
             var randImei = new Random().Next(0, imeiCount);
 
             Task.Run(async () =>
             {
-                SimulateTeltonika(ImieList[randImei]);
+               await SimulateTeltonika(ImieList[randImei]);
 
             });
         }
@@ -298,11 +301,15 @@ class Program
 
             //Timer timer = new Timer(state =>
             //{
-                var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
+            var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
+            string latHexString = LatitudeToHexString(29.553358);
+            string longHexString = LongitudeToHexString(52.598220);
 
 
-                //Thread.Sleep(1000);
-                networkStream.Write(HexUtil.ConvertHexStringToByteArray(
+
+
+            //Thread.Sleep(1000);
+            networkStream.Write(HexUtil.ConvertHexStringToByteArray(
                 "00000000" // 4 zeroes 4 bytes
                 +
                 "000004D6" // data length 4 bytes
@@ -320,8 +327,11 @@ class Program
 
                  // GPS Element
 
-                 "1E9C747C" + // longitude
-                 "154711AC" + // latitude
+                 // "1E9C747C" + // longitude
+                 latHexString +
+
+                 //"154711AC" + // latitude
+                 longHexString +
 
                 //longHex + // longitude
                 //latHex + // latitude
@@ -340,7 +350,7 @@ class Program
                 "05" + // 9 io elements,which length is 1 Byte
                 "EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A7DE0001E9C747C154711AC04CB0000080000000C05EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A08B0001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E199380001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F51430F5644000002F10000A8E310085FFF8A000000018A7E191E50001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E18A920001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F4E430F5944000002F10000A8E310085FFF8A000000018A7E1833F0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F57430F5844000002F10000A8E310085FFF8A000000018A7E17BEC0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F59430F5A44000002F10000A8E310085FFF8A000000018A7E174990001E9C747C154711AC04E10000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E16D460001E9C747C154711AC04E20000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5A44000002F10000A8E310085FFF8A000000018A7E165F30001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E15EA00001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F59430F5944000002F10000A8E310085FFF8A000000018A7E1574D0001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F4E430F5A44000002F10000A8E310085FFF8A000000018A7E14FFA0001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E148A70001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F4C430F5A44000002F10000A8E310085FFF8A000000018A7E141540001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E13A010001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5E44000002F10000A8E310085FFF8A000000018A7E132AE0001E9C747C154711AC04E40000050000000C05EF00F0001505C800450105B50013B60012422F4F430F5E44000002F10000A8E310085FFF8A000000018A7E12B5B0001E9C747C154711AC00AA0132050000000C05EF00F0001505C800450105B50013B60012422F50430F6344000002F10000A8E310085FFF8A00130000203A"));
 
-                Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
+            Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
 
 
 
@@ -348,8 +358,8 @@ class Program
 
             //}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
 
-         
-            
+
+
 
             networkStream.Close();
             tcpClient.Close();
