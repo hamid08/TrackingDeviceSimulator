@@ -10,6 +10,21 @@ class Program
 {
     static void Main(string[] args)
     {
+        double longitude = HexStringToLongitude("1E9C747C");
+        double latitude = HexStringToLatitude("154711AC");
+
+        string latHexString = LatitudeToHexString(latitude);
+        string longHexString = LongitudeToHexString(longitude);
+
+
+        double longitude1 = HexStringToLongitude("0f0ea850");
+        double latitude1 = HexStringToLatitude("209a6900");
+
+        string latHexString1 = LatitudeToHexString(latitude1);
+        string longHexString1 = LongitudeToHexString(longitude1);
+
+
+        Console.WriteLine(longitude);
         int imeiCount = 1500;
         GenerateRandomListIMEI(imeiCount);
 
@@ -37,6 +52,120 @@ class Program
         // Keep the application running until the timer is complete
         Console.ReadLine();
     }
+
+
+    public static string LongitudeToHexString(double longitude)
+    {
+        // Adjust for the fact that the longitude ranges from -180 to 180 degrees
+        longitude = Math.Abs(longitude);
+        longitude = longitude % 180;
+        if (longitude >= 180)
+        {
+            longitude -= 180;
+        }
+
+        // Convert the longitude value to a big-endian signed integer
+        long intValue = (long)(longitude * 1E7);
+        byte[] bytes = BitConverter.GetBytes(intValue);
+        Array.Reverse(bytes);
+
+        // Convert the integer value to a hex string
+        StringBuilder hexString = new StringBuilder(bytes.Length * 2);
+        foreach (byte b in bytes)
+        {
+            hexString.AppendFormat("{0:X2}", b);
+        }
+
+        return hexString.ToString().Substring(8);
+    }
+
+    public static string LatitudeToHexString(double latitude)
+    {
+        // Adjust for the fact that the latitude ranges from -90 to 90 degrees
+        latitude = Math.Abs(latitude);
+        latitude = latitude % 180;
+        if (latitude >= 90)
+        {
+            latitude -= 180;
+        }
+
+        // Convert the latitude value to a big-endian signed integer
+        long intValue = (long)(latitude * 1E7);
+        byte[] bytes = BitConverter.GetBytes(intValue);
+        Array.Reverse(bytes);
+
+        // Convert the integer value to a hex string
+        StringBuilder hexString = new StringBuilder(bytes.Length * 2);
+        foreach (byte b in bytes)
+        {
+            hexString.AppendFormat("{0:X2}", b);
+        }
+
+        return hexString.ToString().Substring(8);
+    }
+
+
+    public static double HexStringToLatitude(string hexString)
+    {
+        // Convert the hex string to a byte array
+        byte[] bytes = new byte[hexString.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hexString.Substring(i * 2, 2), 16);
+        }
+
+        // Treat the byte array as a big-endian signed integer
+        int sign = bytes[0] & 0x80;
+        int intValue = BitConverter.ToInt32(bytes.Reverse().ToArray(), 0);
+        if (sign != 0)
+        {
+            intValue = ~intValue + 1;
+        }
+
+        // Convert the integer value to latitude in degrees
+        double latitude = (double)intValue / 1E7;
+        if (sign != 0)
+        {
+            latitude = -latitude;
+        }
+
+        // Adjust for the fact that the latitude ranges from -90 to 90 degrees
+        latitude = latitude % 180;
+        if (latitude >= 90)
+        {
+            latitude -= 180;
+        }
+
+        return latitude;
+    }
+
+    public static double HexStringToLongitude(string hexString)
+    {
+        // Convert the hex string to a byte array
+        byte[] bytes = new byte[hexString.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hexString.Substring(i * 2, 2), 16);
+        }
+
+        // Treat the byte array as a big-endian signed integer
+        int sign = bytes[0] & 0x80;
+        int intValue = BitConverter.ToInt32(bytes.Reverse().ToArray(), 0);
+        if (sign != 0)
+        {
+            intValue = ~intValue + 1;
+        }
+
+        // Convert the integer value to longitude in degrees
+        double longitude = (double)intValue / 1E7;
+        if (sign != 0)
+        {
+            longitude = -longitude;
+        }
+
+        return longitude;
+    }
+
 
     private static List<string> ImieList = new List<string>();
 
