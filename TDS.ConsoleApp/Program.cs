@@ -10,14 +10,35 @@ class Program
 {
     static void Main(string[] args)
     {
-        //Timer timer = new Timer(state =>
-        //{
-        SimulateTeltonika();
-        //}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+        int imeiCount = 1500;
+        GenerateRandomListIMEI(imeiCount);
+
+        for (int i = 0; i < imeiCount; i++)
+        {
+            var randImei = new Random().Next(0, imeiCount);
+
+            Task.Run(async () =>
+            {
+                SimulateTeltonika(ImieList[randImei]);
+
+            });
+        }
+
+
+
+
+
+
+        ////Timer timer = new Timer(state =>
+        ////{
+        //SimulateTeltonika(ImieList[randImei]);
+        ////}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
 
         // Keep the application running until the timer is complete
         Console.ReadLine();
     }
+
+    private static List<string> ImieList = new List<string>();
 
     private static long HexStringToLong(string hexString)
     {
@@ -29,7 +50,7 @@ class Program
         return Convert.ToString(value, 16);
     }
 
-  
+
     private static DateTime ConvertTimestampToDateTime(long timestamp)
     {
         DateTime dt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
@@ -78,15 +99,56 @@ class Program
         return ConvertTimestampToHexString(timeStamp);
     }
 
-    private static void SimulateTeltonika()
+    private static string CreateIMEI(string first14Digits)
+    {
+        if (first14Digits.Length != 14)
+            throw new ArgumentException("The input string must contain 14 digits");
+
+        int sum = 0;
+        for (int i = 0; i < first14Digits.Length; i++)
+        {
+            int digit = int.Parse(first14Digits[i].ToString());
+
+            if (i % 2 == 0)
+                digit = digit * 2;
+            sum += digit > 9 ? digit / 10 + digit % 10 : digit;
+        }
+
+        int checkDigit = (10 - (sum % 10)) % 10;
+        return first14Digits + checkDigit;
+    }
+
+    private static string GenerateRandomIMEI()
+    {
+        Random rand = new Random();
+        string random14Digits = string.Join("", Enumerable.Repeat(0, 14).Select(i => rand.Next(0, 10).ToString()));
+        return CreateIMEI(random14Digits);
+    }
+
+    private static void GenerateRandomListIMEI(int count)
+    {
+        var list = new List<string>();
+
+        for (int i = 0; i < count; i++)
+        {
+            list.Add(GenerateRandomIMEI());
+        }
+
+        ImieList.AddRange(list);
+    }
+
+    private static async Task SimulateTeltonika(string imei)
     {
         TcpClient tcpClient = new TcpClient();
         //tcpClient.Connect("192.168.3.23", 9090);
         tcpClient.Connect(IPAddress.Loopback, 7002);
         NetworkStream networkStream = tcpClient.GetStream();
 
+
+
+
         //--------------------------Auth Packet
-        var imei = "359632107251230";
+        //var imei = "359632107251230";
 
         var imeiHexString = "000F" + HexUtil.ConvertStringToHexString(imei);
 
@@ -105,13 +167,12 @@ class Program
         {
             Console.WriteLine($"[x] Receive Response At {DateTime.Now}");
 
-            while (true)
+            Timer timer = new Timer(state =>
             {
-
                 var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
 
 
-                Thread.Sleep(1000);
+                //Thread.Sleep(1000);
                 networkStream.Write(HexUtil.ConvertHexStringToByteArray(
                 "00000000" // 4 zeroes 4 bytes
                 +
@@ -121,9 +182,9 @@ class Program
                 +
                 "13" // number od data (1 record)
                 +
-               //"0000018A7E1AF310" // timestamp in milliseconds (137)
-                                  // "0000013feb55ff74" // timestamp in milliseconds (137)
-hexDateTime
+                //"0000018A7E1AF310" // timestamp in milliseconds (137)
+                // "0000013feb55ff74" // timestamp in milliseconds (137)
+                hexDateTime
                 +
                 "00" + // priority
 
@@ -153,13 +214,19 @@ hexDateTime
                 Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
 
 
-            }
+
+
+
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+
+         
+            
 
             networkStream.Close();
             tcpClient.Close();
         }
 
-
+        await Task.CompletedTask;
     }
 
 
