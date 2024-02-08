@@ -167,8 +167,8 @@ class Program
         {
             Console.WriteLine($"[x] Receive Response At {DateTime.Now}");
 
-            Timer timer = new Timer(state =>
-            {
+            //Timer timer = new Timer(state =>
+            //{
                 var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
 
 
@@ -217,7 +217,7 @@ class Program
 
 
 
-            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+            //}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
 
          
             
