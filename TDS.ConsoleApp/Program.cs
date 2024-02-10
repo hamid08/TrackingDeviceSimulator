@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using RandomPathGenerator;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using TDS.Shared.Helpers;
@@ -7,7 +8,7 @@ namespace TDS.ConsoleApp;
 
 class Program
 {
-    static void Main(string[] args)
+    static  Task Main(string[] args)
     {
         //double longitude = HexStringToLongitude("1E9C747C");
         //double latitude = HexStringToLatitude("154711AC");
@@ -22,9 +23,8 @@ class Program
         //string latHexString1 = LatitudeToHexString(latitude1);
         //string longHexString1 = LongitudeToHexString(longitude1);
 
-        //var source = new Point(29.553358, 52.598220);
-        //var destination = new Point(29.554441, 52.608920);
-        //var points = RandomPointGenerator.GenerateRandomPoints(source, destination, 1);
+
+
 
 
 
@@ -37,7 +37,7 @@ class Program
 
             Task.Run(async () =>
             {
-               await SimulateTeltonika(ImieList[randImei]);
+                await SimulateTeltonika(ImieList[randImei], Location.GenerateRouteForDevice());
 
             });
         }
@@ -269,7 +269,7 @@ class Program
         ImieList.AddRange(list);
     }
 
-    private static async Task SimulateTeltonika(string imei)
+    private static async Task SimulateTeltonika(string imei, List<Location> locations)
     {
         TcpClient tcpClient = new TcpClient();
         //tcpClient.Connect("192.168.3.23", 9090);
@@ -299,64 +299,64 @@ class Program
         {
             Console.WriteLine($"[x] Receive Response At {DateTime.Now}");
 
-            //Timer timer = new Timer(state =>
-            //{
-            var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
-            string latHexString = LatitudeToHexString(29.553358);
-            string longHexString = LongitudeToHexString(52.598220);
+            locations.ForEach(location =>
+            {
+                var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
+                string latHexString = LatitudeToHexString(location.Latitude);
+                string longHexString = LongitudeToHexString(location.Longitude);
 
 
 
 
-            //Thread.Sleep(1000);
-            networkStream.Write(HexUtil.ConvertHexStringToByteArray(
-                "00000000" // 4 zeroes 4 bytes
-                +
-                "000004D6" // data length 4 bytes
-                +
-                "08" // codec ID 1 bytes
-                +
-                "13" // number od data (1 record)
-                +
-                //"0000018A7E1AF310" // timestamp in milliseconds (137)
-                // "0000013feb55ff74" // timestamp in milliseconds (137)
-                hexDateTime
-                +
-                "00" + // priority
+                Thread.Sleep(1000);
+                networkStream.Write(HexUtil.ConvertHexStringToByteArray(
+                    "00000000" // 4 zeroes 4 bytes
+                    +
+                    "000004D6" // data length 4 bytes
+                    +
+                    "08" // codec ID 1 bytes
+                    +
+                    "13" // number od data (1 record)
+                    +
+                    //"0000018A7E1AF310" // timestamp in milliseconds (137)
+                    // "0000013feb55ff74" // timestamp in milliseconds (137)
+                    hexDateTime
+                    +
+                    "00" + // priority
 
 
-                 // GPS Element
+                     // GPS Element
 
-                 // "1E9C747C" + // longitude
-                 latHexString +
+                     // "1E9C747C" + // longitude
+                     latHexString +
 
-                 //"154711AC" + // latitude
-                 longHexString +
+                     //"154711AC" + // latitude
+                     longHexString +
 
-                //longHex + // longitude
-                //latHex + // latitude
-
-
-                "04CB" + // altitude
-                "0000" + // angle
-                "08" +  // sattelites
-                "0000" + // speed
+                    //longHex + // longitude
+                    //latHex + // latitude
 
 
-
-                //IO Element
-                "00" + // io element id
-                "0C" + // 30 io elements in record(total)
-                "05" + // 9 io elements,which length is 1 Byte
-                "EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A7DE0001E9C747C154711AC04CB0000080000000C05EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A08B0001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E199380001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F51430F5644000002F10000A8E310085FFF8A000000018A7E191E50001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E18A920001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F4E430F5944000002F10000A8E310085FFF8A000000018A7E1833F0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F57430F5844000002F10000A8E310085FFF8A000000018A7E17BEC0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F59430F5A44000002F10000A8E310085FFF8A000000018A7E174990001E9C747C154711AC04E10000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E16D460001E9C747C154711AC04E20000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5A44000002F10000A8E310085FFF8A000000018A7E165F30001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E15EA00001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F59430F5944000002F10000A8E310085FFF8A000000018A7E1574D0001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F4E430F5A44000002F10000A8E310085FFF8A000000018A7E14FFA0001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E148A70001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F4C430F5A44000002F10000A8E310085FFF8A000000018A7E141540001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E13A010001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5E44000002F10000A8E310085FFF8A000000018A7E132AE0001E9C747C154711AC04E40000050000000C05EF00F0001505C800450105B50013B60012422F4F430F5E44000002F10000A8E310085FFF8A000000018A7E12B5B0001E9C747C154711AC00AA0132050000000C05EF00F0001505C800450105B50013B60012422F50430F6344000002F10000A8E310085FFF8A00130000203A"));
-
-            Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
+                    "04CB" + // altitude
+                    "0000" + // angle
+                    "08" +  // sattelites
+                    "0000" + // speed
 
 
 
+                    //IO Element
+                    "00" + // io element id
+                    "0C" + // 30 io elements in record(total)
+                    "05" + // 9 io elements,which length is 1 Byte
+                    "EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A7DE0001E9C747C154711AC04CB0000080000000C05EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A08B0001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E199380001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F51430F5644000002F10000A8E310085FFF8A000000018A7E191E50001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E18A920001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F4E430F5944000002F10000A8E310085FFF8A000000018A7E1833F0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F57430F5844000002F10000A8E310085FFF8A000000018A7E17BEC0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F59430F5A44000002F10000A8E310085FFF8A000000018A7E174990001E9C747C154711AC04E10000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E16D460001E9C747C154711AC04E20000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5A44000002F10000A8E310085FFF8A000000018A7E165F30001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E15EA00001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F59430F5944000002F10000A8E310085FFF8A000000018A7E1574D0001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F4E430F5A44000002F10000A8E310085FFF8A000000018A7E14FFA0001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E148A70001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F4C430F5A44000002F10000A8E310085FFF8A000000018A7E141540001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E13A010001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5E44000002F10000A8E310085FFF8A000000018A7E132AE0001E9C747C154711AC04E40000050000000C05EF00F0001505C800450105B50013B60012422F4F430F5E44000002F10000A8E310085FFF8A000000018A7E12B5B0001E9C747C154711AC00AA0132050000000C05EF00F0001505C800450105B50013B60012422F50430F6344000002F10000A8E310085FFF8A00130000203A"));
+
+                Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
 
 
-            //}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+
+
+
+            });
 
 
 
@@ -465,38 +465,6 @@ class Program
     //    //networkStream.Close();
     //    //tcpClient.Close();
     //}
-
-    private static (double, double) GetRandomLocation()
-    {
-        Random rand = new Random();
-
-        // Generate a random latitude between 46.7662 and 46.7781 degrees (the latitude range of the center of Cluj-Napoca)
-        double lat = rand.NextDouble() * 0.0119 + 46.7662;
-
-        // Generate a random longitude between 23.5896 and 23.6162 degrees (the longitude range of the center of Cluj-Napoca)
-        double lon = rand.NextDouble() * 0.0266 + 23.5896;
-
-        return (lat, lon);
-    }
-
-    private static (double, double) GetRandomLocationInIran()
-    {
-        Random rand = new Random();
-
-        // Define the boundaries of Iran in latitude and longitude
-        double minLatitude = 24.2704;
-        double maxLatitude = 39.8282;
-        double minLongitude = 44.3261;
-        double maxLongitude = 62.3336;
-
-        // Generate a random latitude within the latitude boundaries of Iran
-        double lat = rand.NextDouble() * (maxLatitude - minLatitude) + minLatitude;
-
-        // Generate a random longitude within the longitude boundaries of Iran
-        double lon = rand.NextDouble() * (maxLongitude - minLongitude) + minLongitude;
-
-        return (lat, lon);
-    }
 
 
 
