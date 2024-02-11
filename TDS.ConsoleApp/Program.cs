@@ -8,53 +8,44 @@ namespace TDS.ConsoleApp;
 
 class Program
 {
-    static  Task Main(string[] args)
+    static async Task Main(string[] args)
     {
-        //double longitude = HexStringToLongitude("1E9C747C");
-        //double latitude = HexStringToLatitude("154711AC");
-
-        //string latHexString = LatitudeToHexString(latitude);
-        //string longHexString = LongitudeToHexString(longitude);
-
-
-        //double longitude1 = HexStringToLongitude("0f0ea850");
-        //double latitude1 = HexStringToLatitude("209a6900");
-
-        //string latHexString1 = LatitudeToHexString(latitude1);
-        //string longHexString1 = LongitudeToHexString(longitude1);
-
-
-
-
-
-
         int imeiCount = 1500;
-        GenerateRandomListIMEI(imeiCount);
+        var imeis = GenerateRandomIMEIs(imeiCount);
+        Locations = RouteGenerator.GenerateRouteForDevice(imeis);
 
-        while (true)
+        while (Locations.Any(c => c.Locations.Any()))
         {
-            var randImei = new Random().Next(0, imeiCount);
-
-            Task.Run(async () =>
-            {
-                await SimulateTeltonika(ImieList[randImei], Location.GenerateRouteForDevice());
-
-            });
+            await SimulateToAllDevices(imeis);
         }
 
 
-
-
-
-
-        ////Timer timer = new Timer(state =>
-        ////{
-        //SimulateTeltonika(ImieList[randImei]);
-        ////}, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
-
-        // Keep the application running until the timer is complete
-        Console.ReadLine();
     }
+
+
+    private static async Task SimulateToAllDevices(List<string> imeis)
+    {
+
+        var tasks = new List<Task>();
+
+        for (int i = 0; i < imeis.Count; i++)
+        {
+            var currentImei = imeis[i];
+            var newLocation = Locations.Where(c => c.Imei == currentImei).Select(c => c.Locations.FirstOrDefault()).FirstOrDefault();
+            if (newLocation is not null)
+                tasks.Add(SimulateTeltonika(currentImei, newLocation));
+        }
+
+
+        //_ = Task.Run(async () =>
+        //{
+        await Task.WhenAll(tasks);
+
+        //});
+
+    }
+
+    private static List<LocationsWithImie> Locations = new List<LocationsWithImie>();
 
 
     public static string LongitudeToHexString(double longitude)
@@ -257,19 +248,20 @@ class Program
         return CreateIMEI(random14Digits);
     }
 
-    private static void GenerateRandomListIMEI(int count)
+    private static List<string> GenerateRandomIMEIs(int count)
     {
-        var list = new List<string>();
+        var randomImeis = new List<string>();
 
         for (int i = 0; i < count; i++)
         {
-            list.Add(GenerateRandomIMEI());
+            randomImeis.Add(GenerateRandomIMEI());
         }
 
-        ImieList.AddRange(list);
+        return randomImeis;
     }
 
-    private static async Task SimulateTeltonika(string imei, List<Location> locations)
+
+    private static async Task SimulateTeltonika(string imei, Location location)
     {
         TcpClient tcpClient = new TcpClient();
         //tcpClient.Connect("192.168.3.23", 9090);
@@ -277,13 +269,11 @@ class Program
         NetworkStream networkStream = tcpClient.GetStream();
 
 
-
-
         //--------------------------Auth Packet
         //var imei = "359632107251230";
 
-        var imeiHexString = "000F" + HexUtil.ConvertStringToHexString(imei);
 
+        var imeiHexString = "000F" + HexUtil.ConvertStringToHexString(imei);
 
         networkStream.Write(HexUtil.ConvertHexStringToByteArray(imeiHexString));
         Console.WriteLine($"[x] Send Login Request At {DateTime.Now}");
@@ -292,79 +282,70 @@ class Program
         Thread.Sleep(1000);
 
         // Read the response from the server
-        byte[] buffer = new byte[1024];
-        int bytesRead = networkStream.Read(buffer, 0, buffer.Length);
-        string response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-        if (!string.IsNullOrEmpty(response))
-        {
+        //byte[] buffer = new byte[1024];
+        //int bytesRead = networkStream.Read(buffer, 0, buffer.Length);
+        //string response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+        //if (!string.IsNullOrEmpty(response))
+        //{
             Console.WriteLine($"[x] Receive Response At {DateTime.Now}");
 
-            locations.ForEach(location =>
-            {
-                var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
-                string latHexString = LatitudeToHexString(location.Latitude);
-                string longHexString = LongitudeToHexString(location.Longitude);
+
+            var hexDateTime = ConvertDateTimeToHexString(DateTime.Now);
+            string latHexString = LatitudeToHexString(location.Latitude);
+            string longHexString = LongitudeToHexString(location.Longitude);
+
+            Thread.Sleep(1000);
+            networkStream.Write(HexUtil.ConvertHexStringToByteArray(
+                "00000000" // 4 zeroes 4 bytes
+                +
+                "000004D6" // data length 4 bytes
+                +
+                "08" // codec ID 1 bytes
+                +
+                "13" // number od data (1 record)
+                +
+                //"0000018A7E1AF310" // timestamp in milliseconds (137)
+                // "0000013feb55ff74" // timestamp in milliseconds (137)
+                hexDateTime
+                +
+                "00" + // priority
+
+
+                 // GPS Element
+
+                 // "1E9C747C" + // longitude
+                 latHexString +
+
+                 //"154711AC" + // latitude
+                 longHexString +
+
+                //longHex + // longitude
+                //latHex + // latitude
+
+
+                "04CB" + // altitude
+                "0000" + // angle
+                "08" +  // sattelites
+                "0000" + // speed
 
 
 
+                //IO Element
+                "00" + // io element id
+                "0C" + // 30 io elements in record(total)
+                "05" + // 9 io elements,which length is 1 Byte
+                "EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A7DE0001E9C747C154711AC04CB0000080000000C05EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A08B0001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E199380001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F51430F5644000002F10000A8E310085FFF8A000000018A7E191E50001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E18A920001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F4E430F5944000002F10000A8E310085FFF8A000000018A7E1833F0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F57430F5844000002F10000A8E310085FFF8A000000018A7E17BEC0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F59430F5A44000002F10000A8E310085FFF8A000000018A7E174990001E9C747C154711AC04E10000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E16D460001E9C747C154711AC04E20000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5A44000002F10000A8E310085FFF8A000000018A7E165F30001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E15EA00001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F59430F5944000002F10000A8E310085FFF8A000000018A7E1574D0001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F4E430F5A44000002F10000A8E310085FFF8A000000018A7E14FFA0001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E148A70001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F4C430F5A44000002F10000A8E310085FFF8A000000018A7E141540001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E13A010001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5E44000002F10000A8E310085FFF8A000000018A7E132AE0001E9C747C154711AC04E40000050000000C05EF00F0001505C800450105B50013B60012422F4F430F5E44000002F10000A8E310085FFF8A000000018A7E12B5B0001E9C747C154711AC00AA0132050000000C05EF00F0001505C800450105B50013B60012422F50430F6344000002F10000A8E310085FFF8A00130000203A"));
 
-                Thread.Sleep(1000);
-                networkStream.Write(HexUtil.ConvertHexStringToByteArray(
-                    "00000000" // 4 zeroes 4 bytes
-                    +
-                    "000004D6" // data length 4 bytes
-                    +
-                    "08" // codec ID 1 bytes
-                    +
-                    "13" // number od data (1 record)
-                    +
-                    //"0000018A7E1AF310" // timestamp in milliseconds (137)
-                    // "0000013feb55ff74" // timestamp in milliseconds (137)
-                    hexDateTime
-                    +
-                    "00" + // priority
+            Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
 
+            //networkStream.Close();
+            //tcpClient.Close();
+        //}
 
-                     // GPS Element
+        var currentImeilocations = Locations.FirstOrDefault(c => c.Imei == imei);
+        var locationNeedDelete = currentImeilocations!.Locations.FirstOrDefault(c => c.Latitude == location.Latitude && c.Longitude == location.Longitude)!;
 
-                     // "1E9C747C" + // longitude
-                     latHexString +
-
-                     //"154711AC" + // latitude
-                     longHexString +
-
-                    //longHex + // longitude
-                    //latHex + // latitude
-
-
-                    "04CB" + // altitude
-                    "0000" + // angle
-                    "08" +  // sattelites
-                    "0000" + // speed
-
-
-
-                    //IO Element
-                    "00" + // io element id
-                    "0C" + // 30 io elements in record(total)
-                    "05" + // 9 io elements,which length is 1 Byte
-                    "EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A7DE0001E9C747C154711AC04CB0000080000000C05EF00F0001505C800450105B50008B60007422F54430F5544000002F10000A8E310085FFF8A000000018A7E1A08B0001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E199380001E9C747C154711AC04CB0000070000000C05EF00F0001505C800450105B50009B60007422F51430F5644000002F10000A8E310085FFF8A000000018A7E191E50001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F54430F5644000002F10000A8E310085FFF8A000000018A7E18A920001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F4E430F5944000002F10000A8E310085FFF8A000000018A7E1833F0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F57430F5844000002F10000A8E310085FFF8A000000018A7E17BEC0001E9C747C154711AC04CA0000070000000C05EF00F0001505C800450105B50009B60007422F59430F5A44000002F10000A8E310085FFF8A000000018A7E174990001E9C747C154711AC04E10000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E16D460001E9C747C154711AC04E20000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5A44000002F10000A8E310085FFF8A000000018A7E165F30001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E15EA00001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F59430F5944000002F10000A8E310085FFF8A000000018A7E1574D0001E9C747C154711AC04E30000060000000C05EF00F0001505C800450105B50010B6000F422F4E430F5A44000002F10000A8E310085FFF8A000000018A7E14FFA0001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F51430F5A44000002F10000A8E310085FFF8A000000018A7E148A70001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F4C430F5A44000002F10000A8E310085FFF8A000000018A7E141540001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F56430F5A44000002F10000A8E310085FFF8A000000018A7E13A010001E9C747C154711AC04E40000060000000C05EF00F0001505C800450105B50010B6000F422F50430F5E44000002F10000A8E310085FFF8A000000018A7E132AE0001E9C747C154711AC04E40000050000000C05EF00F0001505C800450105B50013B60012422F4F430F5E44000002F10000A8E310085FFF8A000000018A7E12B5B0001E9C747C154711AC00AA0132050000000C05EF00F0001505C800450105B50013B60012422F50430F6344000002F10000A8E310085FFF8A00130000203A"));
-
-                Console.WriteLine($"[x] Send Location Packate At {DateTime.Now}");
-
-
-
-
-
-            });
-
-
-
-
-            networkStream.Close();
-            tcpClient.Close();
-        }
-
+        currentImeilocations!.Locations.Remove(locationNeedDelete);
         await Task.CompletedTask;
     }
 
